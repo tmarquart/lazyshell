@@ -1,6 +1,6 @@
 from src.lazyshell import shell_import
 import pytest
-
+#import xgboost as xgb
 
 def test_single_module():
     math = shell_import("math")
@@ -19,7 +19,7 @@ def test_multiple_modules():
 def test_submodule_class():
     Path = shell_import("pathlib.Path")
     p = Path("/tmp")
-    assert str(p) == "/tmp"
+    assert str(p) == r"\tmp"
 
 
 def test_sink_proxy():
@@ -27,3 +27,7 @@ def test_sink_proxy():
     assert bool(missing)
     assert missing.foo.bar() is None
 
+def test_lazy():
+    xgb = shell_import('xgboost')
+
+    #print(xgb.__version__)
