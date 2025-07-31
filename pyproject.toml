@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lazyshell"
-version = "0.1.0"
+version = "0.2.0"
 authors = [{name = "tmarquart", email="tmarquart@gmail.com"}]
 description = "Lazy optional imports"
 readme = "README.md"
