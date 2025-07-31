@@ -1,6 +1,6 @@
 from src.lazyshell import shell_import
 import pytest
-#import xgboost as xgb
+
 
 def test_single_module():
     math = shell_import("math")
@@ -27,7 +27,9 @@ def test_sink_proxy():
     assert bool(missing)
     assert missing.foo.bar() is None
 
-def test_lazy():
-    xgb = shell_import('xgboost')
+def test_is_loaded_property():
+    math = shell_import("math")
+    assert not math.is_loaded
+    math.sqrt(4)
+    assert math.is_loaded
 
-    #print(xgb.__version__)

@@ -142,6 +142,12 @@ class _LazyModuleProxy:
         state = "loaded" if self._obj is not _UNSET else "pending"
         return f"<lazyshell.Proxy {self._spec.path} ({state})>"
 
+    @property
+    def is_loaded(self) -> bool:
+        """Return ``True`` if the underlying object has been imported."""
+
+        return self._obj is not _UNSET
+
 
 def _parse_specs(modules: Iterable[str | Tuple[str, str]]) -> Iterable[_ImportSpec]:
     for mod in modules:
