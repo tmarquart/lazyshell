@@ -2,31 +2,28 @@ from src.lazyshell import shell_import
 import pytest
 
 
-def test_simple():
-    pd=shell_import('pandas')
-
-def test_call():
-    pd=shell_import('pandas')
-    df=pd.dataframe()
-    print(df)
-
-def test_multi():
-    pd,np,notfound=shell_import('pandas','np','doesnotexist')
-
-    if pd:
-        print('Pandas found')
-        df=pd.dataframe()
-        print(df)
-    else:
-        raise ValueError("Pandas not working")
-
-    if notfound:
-        raise ValueError("Does not exist")
-
-def test_submodule():
-    Environment=shell_import('jinja2.Environment')
-    test=Environment('something')
+def test_single_module():
+    math = shell_import("math")
+    assert math.sqrt(9) == 3
 
 
-if __name__=='main':
-    pytest.main()
+def test_multiple_modules():
+    math, sys_mod, missing = shell_import("math", "sys", "no_such_pkg")
+    assert math.factorial(5) == 120
+    assert hasattr(sys_mod, "path")
+    assert not bool(missing)
+    with pytest.raises(ImportError):
+        missing.foo
+
+
+def test_submodule_class():
+    Path = shell_import("pathlib.Path")
+    p = Path("/tmp")
+    assert str(p) == "/tmp"
+
+
+def test_sink_proxy():
+    missing = shell_import("does.not.exist", sink=True)
+    assert bool(missing)
+    assert missing.foo.bar() is None
+
