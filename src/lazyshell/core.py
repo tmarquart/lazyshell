@@ -42,7 +42,7 @@ class _MissingPackage:
         raise ImportError(f"Optional dependency '{self._name}' is not installed")
 
     def __repr__(self) -> str:  # pragma: no cover - trivial
-        return f"<lazy_shell.Missing {self._name}>"
+        return f"<lazyshell.Missing {self._name}>"
 
 
 class _SinkFunction:
@@ -63,7 +63,7 @@ class _SinkProxy:
     def __init__(self, qualname: str, sink_map: Dict[str, Any] | None = None) -> None:
         global _warned
         if not _warned and os.getenv("LAZYSHELL_DEBUG") == "1":
-            warnings.warn("lazy_shell: using sink proxy for missing import")
+            warnings.warn("lazyshell: using sink proxy for missing import")
             _warned = True
         self._qualname = qualname
         self._sink_map = sink_map or {}
@@ -90,7 +90,7 @@ class _SinkProxy:
         return None
 
     def __repr__(self) -> str:  # pragma: no cover - trivial
-        return f"<lazy_shell.Sink {self._qualname}>"
+        return f"<lazyshell.Sink {self._qualname}>"
 
 
 class _LazyModuleProxy:
@@ -140,7 +140,7 @@ class _LazyModuleProxy:
 
     def __repr__(self) -> str:  # pragma: no cover - trivial
         state = "loaded" if self._obj is not _UNSET else "pending"
-        return f"<lazy_shell.Proxy {self._spec.path} ({state})>"
+        return f"<lazyshell.Proxy {self._spec.path} ({state})>"
 
 
 def _parse_specs(modules: Iterable[str | Tuple[str, str]]) -> Iterable[_ImportSpec]:

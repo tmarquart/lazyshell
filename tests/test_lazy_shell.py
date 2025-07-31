@@ -3,7 +3,7 @@ import logging
 import threading
 import pytest
 
-from lazy_shell import shell_import
+from src.lazyshell import shell_import
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
