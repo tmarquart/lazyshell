@@ -5,7 +5,7 @@ import os
 import threading
 import warnings
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, Tuple
+from typing import Any, Callable, Dict, Iterable, Tuple, overload
 
 __all__ = [
     "shell_import",
@@ -152,11 +152,31 @@ def _parse_specs(modules: Iterable[str | Tuple[str, str]]) -> Iterable[_ImportSp
         yield _ImportSpec(alias=alias, path=path)
 
 
-def shell_import(*modules: str | Tuple[str, str], sink: bool = False, sink_map: Dict[str, Any] | None = None) -> Tuple[Any, ...]:
+@overload
+def shell_import(
+    module: str | Tuple[str, str], *, sink: bool = False, sink_map: Dict[str, Any] | None = None
+) -> Any:
+    ...
+
+
+@overload
+def shell_import(
+    *modules: str | Tuple[str, str],
+    sink: bool = False,
+    sink_map: Dict[str, Any] | None = None
+) -> Tuple[Any, ...]:
+    ...
+
+
+def shell_import(
+    *modules: str | Tuple[str, str], sink: bool = False, sink_map: Dict[str, Any] | None = None
+) -> Any | Tuple[Any, ...]:
     """Return proxies for the requested modules or objects."""
 
     specs = list(_parse_specs(modules))
     proxies = [
         _LazyModuleProxy(spec, sink=sink, sink_map=sink_map) for spec in specs
     ]
+    if len(proxies) == 1:
+        return proxies[0]
     return tuple(proxies)

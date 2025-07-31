@@ -2,4 +2,5 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
+# Add the repository root so imports like ``src.lazyshell`` resolve correctly
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
