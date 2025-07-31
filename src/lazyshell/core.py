@@ -5,7 +5,7 @@ import os
 import threading
 import warnings
 from dataclasses import dataclass
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Iterable, Tuple, Union
 
 __all__ = [
     "shell_import",
@@ -129,10 +129,16 @@ class _SinkProxy:
 class _LazyModuleProxy:
     """Proxy that lazily loads a module/object on first use."""
 
-    def __init__(self, spec: _ImportSpec) -> None:
+    def __init__(
+        self,
+        spec: _ImportSpec,
+        *,
+        sink: bool = False,
+        sink_map: Dict[str, Any] | None = None,
+    ) -> None:
         self._spec = spec
-        self._sink = False
-        self._sink_map: Dict[str, Any] = {}
+        self._sink = sink
+        self._sink_map: Dict[str, Any] = sink_map or {}
         self._lock = threading.Lock()
         self._obj: Any = _UNSET
 
@@ -207,9 +213,28 @@ class _LazyModuleProxy:
         return self._obj is not _UNSET
 
 
-def shell_import(dotted_path: str) -> "_LazyModuleProxy":
-    """Return a proxy for the given module or object."""
+ModuleSpec = Union[str, Tuple[str, str]]
 
-    alias = dotted_path.split(".")[0]
-    spec = _ImportSpec(alias=alias, path=dotted_path)
-    return _LazyModuleProxy(spec)
+
+def shell_import(
+    *modules: ModuleSpec,
+    sink: bool = False,
+    sink_map: Dict[str, Any] | None = None,
+) -> "_LazyModuleProxy" | Tuple["_LazyModuleProxy", ...]:
+    """Return proxies for the given modules or objects."""
+
+    proxies = []
+    for mod in modules:
+        if isinstance(mod, tuple):
+            alias, path = mod
+        else:
+            path = mod
+            alias = mod.split(".")[0]
+        proxy = _LazyModuleProxy(
+            _ImportSpec(alias=alias, path=path), sink=sink, sink_map=sink_map
+        )
+        proxies.append(proxy)
+
+    if len(proxies) == 1:
+        return proxies[0]
+    return tuple(proxies)
