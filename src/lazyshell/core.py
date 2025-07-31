@@ -5,11 +5,10 @@ import os
 import threading
 import warnings
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, Tuple, overload
+from typing import Any, Callable, Dict
 
 __all__ = [
     "shell_import",
-    "_ImportSpec",
     "_LazyModuleProxy",
     "_MissingPackage",
     "_SinkProxy",
@@ -57,6 +56,36 @@ class _SinkFunction:
         return self._func(*args, **kwargs)
 
 
+class _AttrProxy:
+    """Proxy for attributes accessed before a module is loaded."""
+
+    def __init__(self, root: "_LazyModuleProxy", path: str) -> None:
+        self._root = root
+        self._path = path
+
+    def set(self, fallback: Any) -> "_AttrProxy":
+        self._root._sink_map[f"{self._root._spec.alias}.{self._path}"] = fallback
+        return self
+
+    def _resolve(self) -> Any:
+        obj = self._root._load()
+        for part in self._path.split("."):
+            obj = getattr(obj, part)
+        return obj
+
+    def __getattr__(self, item: str) -> Any:
+        return _AttrProxy(self._root, f"{self._path}.{item}")
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self._resolve()(*args, **kwargs)
+
+    def __bool__(self) -> bool:
+        return bool(self._resolve())
+
+    def __repr__(self) -> str:  # pragma: no cover - trivial
+        return f"<lazyshell.AttrProxy {self._path}>"
+
+
 class _SinkProxy:
     """Truthy stand-in for missing imports."""
 
@@ -70,6 +99,10 @@ class _SinkProxy:
 
     def __bool__(self) -> bool:  # pragma: no cover - trivial
         return True
+
+    def set(self, fallback: Any) -> "_SinkProxy":
+        self._sink_map[self._qualname] = fallback
+        return self
 
     def _lookup(self, name: str) -> Any | None:
         return self._sink_map.get(name)
@@ -96,12 +129,35 @@ class _SinkProxy:
 class _LazyModuleProxy:
     """Proxy that lazily loads a module/object on first use."""
 
-    def __init__(self, spec: _ImportSpec, sink: bool, sink_map: Dict[str, Any] | None) -> None:
+    def __init__(self, spec: _ImportSpec) -> None:
         self._spec = spec
-        self._sink = sink
-        self._sink_map = sink_map or {}
+        self._sink = False
+        self._sink_map: Dict[str, Any] = {}
         self._lock = threading.Lock()
         self._obj: Any = _UNSET
+
+    # public API -----------------------------------------------------
+
+    def with_sink(self) -> "_LazyModuleProxy":
+        """Enable sink fallback and return ``self``."""
+
+        self._sink = True
+        return self
+
+    def enable_sink(self) -> "_LazyModuleProxy":
+        """Enable sink mode for an already created proxy."""
+
+        if not self._sink:
+            self._sink = True
+        if isinstance(self._obj, _MissingPackage):
+            self._obj = _SinkProxy(self._spec.alias, self._sink_map)
+        return self
+
+    def set(self, attr: str, fallback: Any) -> "_LazyModuleProxy":
+        """Set a fallback value for ``attr`` when using sink mode."""
+
+        self._sink_map[f"{self._spec.alias}.{attr}"] = fallback
+        return self
 
     def _load(self) -> Any:
         if self._obj is not _UNSET:
@@ -128,6 +184,8 @@ class _LazyModuleProxy:
             return self._obj
 
     def __getattr__(self, item: str) -> Any:
+        if self._obj is _UNSET and self._sink:
+            return _AttrProxy(self, item)
         return getattr(self._load(), item)
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
@@ -135,7 +193,7 @@ class _LazyModuleProxy:
 
     def __bool__(self) -> bool:
         if self._obj is _UNSET:
-            return True if self._sink else False
+            return False
         return bool(self._load())
 
     def __repr__(self) -> str:  # pragma: no cover - trivial
@@ -149,40 +207,9 @@ class _LazyModuleProxy:
         return self._obj is not _UNSET
 
 
-def _parse_specs(modules: Iterable[str | Tuple[str, str]]) -> Iterable[_ImportSpec]:
-    for mod in modules:
-        if isinstance(mod, tuple):
-            alias, path = mod
-        else:
-            alias, path = mod.split(".")[0], mod
-        yield _ImportSpec(alias=alias, path=path)
+def shell_import(dotted_path: str) -> "_LazyModuleProxy":
+    """Return a proxy for the given module or object."""
 
-
-@overload
-def shell_import(
-    module: str | Tuple[str, str], *, sink: bool = False, sink_map: Dict[str, Any] | None = None
-) -> Any:
-    ...
-
-
-@overload
-def shell_import(
-    *modules: str | Tuple[str, str],
-    sink: bool = False,
-    sink_map: Dict[str, Any] | None = None
-) -> Tuple[Any, ...]:
-    ...
-
-
-def shell_import(
-    *modules: str | Tuple[str, str], sink: bool = False, sink_map: Dict[str, Any] | None = None
-) -> Any | Tuple[Any, ...]:
-    """Return proxies for the requested modules or objects."""
-
-    specs = list(_parse_specs(modules))
-    proxies = [
-        _LazyModuleProxy(spec, sink=sink, sink_map=sink_map) for spec in specs
-    ]
-    if len(proxies) == 1:
-        return proxies[0]
-    return tuple(proxies)
+    alias = dotted_path.split(".")[0]
+    spec = _ImportSpec(alias=alias, path=dotted_path)
+    return _LazyModuleProxy(spec)
