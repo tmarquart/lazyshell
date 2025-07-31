@@ -20,7 +20,7 @@ def test_multiple_modules():
 def test_submodule_class():
     Path = shell_import("pathlib.Path")
     p = Path("/tmp")
-    assert str(p) == r"\tmp"
+    assert p.as_posix() == "/tmp"
 
 def test_is_loaded_property():
     math = shell_import("math")
