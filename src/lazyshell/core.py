@@ -5,7 +5,7 @@ import os
 import threading
 import warnings
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterable, Tuple, Union
+from typing import Any, Callable, Dict, Tuple, Union
 
 __all__ = [
     "shell_import",
