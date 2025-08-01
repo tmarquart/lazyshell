@@ -141,6 +141,7 @@ class _LazyModuleProxy:
         self._sink_map: Dict[str, Any] = sink_map or {}
         self._lock = threading.Lock()
         self._obj: Any = _UNSET
+        self._available=False
 
     # public API -----------------------------------------------------
 
@@ -157,6 +158,7 @@ class _LazyModuleProxy:
             self._sink = True
         if isinstance(self._obj, _MissingPackage):
             self._obj = _SinkProxy(self._spec.alias, self._sink_map)
+            self._available=True
         return self
 
     def set(self, attr: str, fallback: Any) -> "_LazyModuleProxy":
@@ -182,9 +184,11 @@ class _LazyModuleProxy:
                 for attr in parts[i:]:
                     obj = getattr(obj, attr)
                 self._obj = obj
+                self._available = True
                 return obj
             if self._sink:
                 self._obj = _SinkProxy(self._spec.alias, self._sink_map)
+                self._available = True
             else:
                 self._obj = _MissingPackage(self._spec.alias)
             return self._obj
@@ -198,20 +202,38 @@ class _LazyModuleProxy:
         return self._load()(*args, **kwargs)
 
     def __bool__(self) -> bool:
-        if self._obj is _UNSET:
-            return False
-        return bool(self._load())
+        return self.is_available
 
     def __repr__(self) -> str:  # pragma: no cover - trivial
         state = "loaded" if self._obj is not _UNSET else "pending"
         return f"<lazyshell.Proxy {self._spec.path} ({state})>"
 
+    def __eq__(self, other):
+        if other is True or other is False:
+            raise TypeError(
+                f"Invalid comparison: `{self._spec.alias or self._spec.module}` == {other}.\n"
+                "Use `if proxy:` or `if not proxy:` instead of `== True` or `== False`.\n"
+            )
+        return NotImplemented
+
+    def __ne__(self, other):
+        if other is True or other is False:
+            raise TypeError(
+                f"Invalid comparison: `{self._spec.alias or self._spec.module}` != {other}.\n"
+                "Use `if proxy:` or `if not proxy:` instead of `!= True` or `!= False`.\n"
+            )
+        return NotImplemented
+
     @property
     def is_loaded(self) -> bool:
         """Return ``True`` if the underlying object has been imported."""
-
         return self._obj is not _UNSET
 
+    @property
+    def is_available(self) -> bool:
+        if self._obj is _UNSET:
+            self._load()
+        return self._available
 
 ModuleSpec = Union[str, Tuple[str, str]]
 

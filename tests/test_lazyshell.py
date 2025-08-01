@@ -4,12 +4,24 @@ from src.lazyshell import shell_import
 
 def test_load_success():
     math = shell_import("math")
-    assert not math
     assert not math.is_loaded
     assert math.sqrt(9) == 3
     assert math.is_loaded
-    assert math
+    assert bool(math)
 
+def test_available_check():
+    math=shell_import('math')
+    if math:
+        pass
+    else:
+        assert False
+
+    if not math:
+        assert False
+    else:
+        pass
+    assert bool(math)==True
+    assert math.is_available==True
 
 def test_multiple_modules():
     math, sys_mod, missing = shell_import("math", "sys", "no_such_pkg")
@@ -45,6 +57,13 @@ def test_with_sink():
     assert missing.is_loaded
     assert bool(missing)
 
+def test_eq_errors():
+    math=shell_import('math')
+    with pytest.raises(TypeError):
+        math==True #bad practice, this should error
+    with pytest.raises(TypeError):
+        math==False #bad practice, this should error
+    math==12345  #comparing to something other than true or false, should not error
 
 def test_set_fallback_via_attr():
     captured = []
@@ -67,3 +86,5 @@ def test_enable_sink_after_failure():
     assert proxy.foo() is None
     assert bool(proxy)
 
+if __name__=='__main__':
+    test_load_success()
