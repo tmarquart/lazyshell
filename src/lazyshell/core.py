@@ -213,6 +213,7 @@ class _LazyModuleProxy:
             raise TypeError(
                 f"Invalid comparison: `{self._spec.alias or self._spec.module}` == {other}.\n"
                 "Use `if proxy:` or `if not proxy:` instead of `== True` or `== False`.\n"
+                "if a direct comparison is required use proxy.is_available==True"
             )
         return NotImplemented
 
@@ -221,6 +222,7 @@ class _LazyModuleProxy:
             raise TypeError(
                 f"Invalid comparison: `{self._spec.alias or self._spec.module}` != {other}.\n"
                 "Use `if proxy:` or `if not proxy:` instead of `!= True` or `!= False`.\n"
+                "if a direct comparison is required use proxy.is_available==False"
             )
         return NotImplemented
 
